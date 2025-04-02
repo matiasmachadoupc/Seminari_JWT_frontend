@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -27,6 +28,23 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('access_token');
+  }
+
+  refreshToken(): Observable<any> {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      return throwError(() => new Error('No refresh token found'));
+    }
+    return this.http.post(`${this.apiUrl}/refresh`, { refreshToken }).pipe(
+      tap((response: any) => {
+        localStorage.setItem('access_token', response.token);
+      }),
+      catchError((error) => {
+        console.error('Error al refrescar el token:', error);
+        this.logout();
+        return throwError(() => error);
+      })
+    );
   }
 }
 
